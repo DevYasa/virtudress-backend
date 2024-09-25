@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Product = require('../models/Product');
 const multer = require('multer');
 const path = require('path');
+const shortid = require('shortid');
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
@@ -64,6 +65,28 @@ router.post('/product', isAuthenticated, upload.array('images', 5), async (req, 
     res.status(201).json({ message: 'Product saved successfully', product });
   } catch (error) {
     res.status(500).json({ message: 'Error saving product', error: error.message });
+  }
+});
+
+router.post('/generate-tryon-link', isAuthenticated, async (req, res) => {
+  const { productId } = req.body;
+
+  try {
+    const product = await Product.findOne({ _id: productId, userId: req.session.userId });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    if (!product.tryOnLink) {
+      product.tryOnLink = shortid.generate();
+      await product.save();
+    }
+
+    const tryOnUrl = `${process.env.FRONTEND_URL}/try-on/${product.tryOnLink}`;
+    res.json({ tryOnUrl });
+  } catch (error) {
+    console.error('Error generating try-on link:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

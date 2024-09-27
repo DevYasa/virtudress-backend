@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Product = require('../models/Product');
 const multer = require('multer');
 const path = require('path');
-const shortid = require('shortid');
+const fs = require('fs');
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
@@ -89,6 +89,48 @@ router.get('/products', isAuthenticated, async (req, res) => {
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching products', error: error.message });
+  }
+});
+
+// Update product with 3D model URL
+router.put('/product/:productId/model', isAuthenticated, async (req, res) => {
+  try {
+    const { modelFileName } = req.body;
+    const product = await Product.findOne({ productId: req.params.productId, userId: req.session.userId });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Check if the file exists in the 3d-models directory
+    const modelPath = path.join(__dirname, '..', '3d-models', modelFileName);
+    if (!fs.existsSync(modelPath)) {
+      return res.status(400).json({ message: '3D model file not found in the directory' });
+    }
+
+    // Update the modelUrl in the database
+    product.modelUrl = modelFileName;
+    await product.save();
+
+    res.json({ message: '3D model URL updated successfully', product });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating 3D model URL', error: error.message });
+  }
+});
+
+// Get 3D model for a product
+router.get('/product/:productId/model', async (req, res) => {
+  try {
+    const product = await Product.findOne({ productId: req.params.productId });
+
+    if (!product || !product.modelUrl) {
+      return res.status(404).json({ message: '3D model not found' });
+    }
+
+    const modelPath = path.join(__dirname, '..', '3d-models', product.modelUrl);
+    res.sendFile(modelPath);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching 3D model', error: error.message });
   }
 });
 

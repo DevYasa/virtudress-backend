@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contact');
+const adminRoutes = require('./routes/admin');
 
 // Import models
 const Order = require('./models/Order');
@@ -70,6 +71,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Example of a cached route
 app.get('/api/cached-data', cache.route(), (req, res) => {

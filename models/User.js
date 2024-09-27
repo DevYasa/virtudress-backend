@@ -19,6 +19,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
   subscriptionPlan: {
     type: String,
     default: null

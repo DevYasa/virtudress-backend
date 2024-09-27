@@ -13,7 +13,7 @@ router.post('/signup', async (req, res) => {
     const user = new User({ name, email, password, website });
     await user.save();
     req.session.userId = user._id;
-    res.status(201).json({ message: 'User created successfully', userId: user._id });
+    res.status(201).json({ message: 'User created successfully', user: { ...user.toObject(), password: undefined } });
   } catch (error) {
     res.status(500).json({ message: 'Error creating user', error: error.message });
   }
@@ -28,7 +28,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     req.session.userId = user._id;
-    res.json({ message: 'Logged in successfully', userId: user._id });
+    res.json({ message: 'Logged in successfully', user: { ...user.toObject(), password: undefined } });
   } catch (error) {
     res.status(500).json({ message: 'Error logging in', error: error.message });
   }
@@ -45,21 +45,18 @@ router.post('/logout', (req, res) => {
 });
 
 // Get current user route
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (req.session.userId) {
-    User.findById(req.session.userId)
-      .then(user => {
-        if (user) {
-          console.log('Sending user data:', user);
-          res.json(user);
-        } else {
-          res.status(404).json({ message: 'User not found' });
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching user:', err);
-        res.status(500).json({ message: 'Error fetching user data' });
-      });
+    try {
+      const user = await User.findById(req.session.userId).select('-password');
+      if (user) {
+        res.json(user);
+      } else {
+        res.status(404).json({ message: 'User not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching user data', error: error.message });
+    }
   } else {
     res.status(401).json({ message: 'Not authenticated' });
   }

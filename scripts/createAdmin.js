@@ -21,7 +21,7 @@ async function createAdmin() {
       name: 'Admin User',
       email: adminEmail,
       password: 'admin123',  // Change this to a secure password
-      website: 'http://example.com',
+      website: 'http://virtudress.com',
       isAdmin: true
     });
     await admin.save();

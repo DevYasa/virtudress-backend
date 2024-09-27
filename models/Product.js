@@ -35,10 +35,10 @@ const ProductSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  productLink: {
+  integrationLink: {
     type: String,
     unique: true,
-    default: () => shortid.generate()
+    default: null
   },
   tryOns: {
     type: Number,

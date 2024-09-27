@@ -23,22 +23,9 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  subscriptionPlan: {
-    type: String,
-    default: null
-  },
-  subscriptionStatus: {
-    type: String,
-    enum: ['active', 'inactive', 'cancelled'],
-    default: 'inactive'
-  },
-  subscriptionStartDate: {
-    type: Date,
-    default: null
-  },
-  subscriptionEndDate: {
-    type: Date,
-    default: null
+  dashboardAccess: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

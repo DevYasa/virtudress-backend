@@ -6,15 +6,14 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const redis = require('redis');
 const expressRedisCache = require('express-redis-cache');
-const crypto = require('crypto');
 const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
 const productRoutes = require('./routes/product');
+const path = require('path');
 
 // Import models
-const Order = require('./models/Order');
 const User = require('./models/User');
 
 const app = express();
@@ -81,80 +80,8 @@ app.get('/api/cached-data', cache.route(), (req, res) => {
   res.json({ message: 'This response is cached' });
 });
 
-// Create an order
-app.post('/api/create-order', async (req, res) => {
-  try {
-    const { userId, planId, amount, ...additionalData } = req.body;
-    
-    console.log('Received order data:', { userId, planId, amount, additionalData });
-
-    if (!userId || !planId) {
-      console.error('Missing userId or planId:', { userId, planId });
-      return res.status(400).json({ error: 'userId and planId are required' });
-    }
-
-    const order = new Order({
-      userId,
-      planId,
-      amount,
-      status: 'pending',
-      additionalData
-    });
-
-    await order.save();
-    res.json({ orderId: order._id });
-  } catch (err) {
-    console.error('Error creating order:', err);
-    res.status(500).json({ error: 'Failed to create order', details: err.message });
-  }
-});
-
 // Serve 3D models
 app.use('/3d-models', express.static(path.join(__dirname, '3d-models')));
-
-// PayHere notification handler
-app.post('/api/payhere-notify', async (req, res) => {
-  const { merchant_id, order_id, payhere_amount, payhere_currency,
-    status_code, md5sig, custom_1, custom_2 } = req.body;
-
-  // Verify the PayHere signature
-  const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET;
-  const hash = crypto.createHash('md5')
-    .update(merchant_id + order_id + payhere_amount + payhere_currency + status_code + 
-            custom_1.toLowerCase() + custom_2.toLowerCase() + merchantSecret)
-    .digest('hex');
-
-  if (md5sig === hash.toUpperCase()) {
-    if (status_code === '2') {  // Payment success
-      try {
-        const order = await Order.findById(order_id);
-        if (order) {
-          order.status = 'completed';
-          await order.save();
-          
-          // Update user's subscription
-          const user = await User.findById(order.userId);
-          if (user) {
-            const now = new Date();
-            user.subscriptionPlan = order.planId;
-            user.subscriptionStatus = 'active';
-            user.subscriptionStartDate = now;
-            user.subscriptionEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-            await user.save();
-          }
-
-          console.log(`Order ${order_id} completed and user subscription updated`);
-        }
-      } catch (err) {
-        console.error('Error updating order and user subscription:', err);
-      }
-    }
-    res.sendStatus(200);
-  } else {
-    console.error('Invalid PayHere signature');
-    res.sendStatus(400);
-  }
-});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -6,10 +6,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Middleware to check if user is authenticated
-const isAuthenticated = (req, res, next) => {
+// Middleware to check if user is authenticated and has dashboard access
+const isAuthenticatedWithAccess = async (req, res, next) => {
   if (req.session.userId) {
-    next();
+    const user = await User.findById(req.session.userId);
+    if (user && user.dashboardAccess) {
+      req.user = user;
+      next();
+    } else {
+      res.status(403).json({ message: 'Access denied' });
+    }
   } else {
     res.status(401).json({ message: 'Not authenticated' });
   }
@@ -27,10 +33,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.get('/stats', isAuthenticated, async (req, res) => {
+router.get('/stats', isAuthenticatedWithAccess, async (req, res) => {
   try {
-    const user = await User.findById(req.session.userId);
-    const productCount = await Product.countDocuments({ userId: req.session.userId });
+    const productCount = await Product.countDocuments({ userId: req.user._id });
     
     // You would typically aggregate try-ons and conversion rate from your database
     // For now, we'll return some dummy data for these
@@ -46,7 +51,7 @@ router.get('/stats', isAuthenticated, async (req, res) => {
   }
 });
 
-router.post('/product', isAuthenticated, upload.array('images', 5), async (req, res) => {
+router.post('/product', isAuthenticatedWithAccess, upload.array('images', 5), async (req, res) => {
   try {
     console.log('Received product data:', req.body);
     console.log('Received files:', req.files);
@@ -59,7 +64,7 @@ router.post('/product', isAuthenticated, upload.array('images', 5), async (req, 
     }
 
     const product = new Product({
-      userId: req.session.userId,
+      userId: req.user._id,
       name,
       description,
       color,
@@ -83,9 +88,9 @@ router.post('/product', isAuthenticated, upload.array('images', 5), async (req, 
   }
 });
 
-router.get('/products', isAuthenticated, async (req, res) => {
+router.get('/products', isAuthenticatedWithAccess, async (req, res) => {
   try {
-    const products = await Product.find({ userId: req.session.userId });
+    const products = await Product.find({ userId: req.user._id });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching products', error: error.message });
@@ -93,10 +98,10 @@ router.get('/products', isAuthenticated, async (req, res) => {
 });
 
 // Update product with 3D model URL
-router.put('/product/:productId/model', isAuthenticated, async (req, res) => {
+router.put('/product/:productId/model', isAuthenticatedWithAccess, async (req, res) => {
   try {
     const { modelFileName } = req.body;
-    const product = await Product.findOne({ productId: req.params.productId, userId: req.session.userId });
+    const product = await Product.findOne({ productId: req.params.productId, userId: req.user._id });
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });

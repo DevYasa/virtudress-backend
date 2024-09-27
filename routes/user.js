@@ -48,45 +48,38 @@ router.get('/stats', isAuthenticated, async (req, res) => {
 
 router.post('/product', isAuthenticated, upload.array('images', 5), async (req, res) => {
   try {
-    const { name, description, size, color, fabric } = req.body;
+    console.log('Received product data:', req.body);
+    console.log('Received files:', req.files);
+
+    const { name, description, color, fabricType } = req.body;
     const images = req.files.map(file => file.path);
+
+    if (!name || !description || !color || !fabricType) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
 
     const product = new Product({
       userId: req.session.userId,
       name,
       description,
-      size,
       color,
-      fabric,
+      fabricType,
       images
     });
 
-    await product.save();
-    res.status(201).json({ message: 'Product saved successfully', product });
+    console.log('Product object before save:', product);
+
+    const savedProduct = await product.save();
+    console.log('Product saved successfully:', savedProduct);
+
+    res.status(201).json({ message: 'Product saved successfully', product: savedProduct });
   } catch (error) {
-    res.status(500).json({ message: 'Error saving product', error: error.message });
-  }
-});
-
-router.post('/generate-tryon-link', isAuthenticated, async (req, res) => {
-  const { productId } = req.body;
-
-  try {
-    const product = await Product.findOne({ _id: productId, userId: req.session.userId });
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-
-    if (!product.tryOnLink) {
-      product.tryOnLink = shortid.generate();
-      await product.save();
-    }
-
-    const tryOnUrl = `${process.env.FRONTEND_URL}/try-on/${product.tryOnLink}`;
-    res.json({ tryOnUrl });
-  } catch (error) {
-    console.error('Error generating try-on link:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error saving product:', error);
+    res.status(500).json({ 
+      message: 'Error saving product', 
+      error: error.message,
+      stack: error.stack
+    });
   }
 });
 

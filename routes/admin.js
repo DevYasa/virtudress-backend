@@ -2,58 +2,52 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Product = require('../models/Product');
-
-// Middleware to check if user is admin
-const isAdmin = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.session.userId);
-    if (user && user.isAdmin) {
-      next();
-    } else {
-      res.status(403).json({ message: 'Access denied. Admin only.' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Error checking admin status', error: error.message });
-  }
-};
+const isAdmin = require('../middleware/adminMiddleware');
 
 // Get all users with their products
-router.get('/users-with-products', isAdmin, async (req, res) => {
+router.get('/users-with-products', isAdmin, async (req, res, next) => {
   try {
-    const users = await User.find({}, '-password');
+    console.log('Accessing /users-with-products route');
+    console.log('Request query:', req.query);
+    console.log('Request user:', req.user);
+    
+    const users = await User.find({}, '-password').lean();
     const usersWithProducts = await Promise.all(users.map(async (user) => {
-      const products = await Product.find({ userId: user._id });
+      const products = await Product.find({ userId: user._id }).lean();
       return {
-        ...user.toObject(),
+        ...user,
         products: products
       };
     }));
     res.json(usersWithProducts);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching users and products', error: error.message });
+    console.error('Error in /users-with-products:', error);
+    next(error);
   }
 });
 
-// Get all users
-router.get('/users', isAdmin, async (req, res) => {
+// Get overall stats
+router.get('/stats', isAdmin, async (req, res, next) => {
   try {
-    const users = await User.find({}, '-password');
-    res.json(users);
+    console.log('Accessing /stats route');
+    console.log('Request query:', req.query);
+    console.log('Request user:', req.user);
+    
+    const totalUsers = await User.countDocuments();
+    const totalProducts = await Product.countDocuments();
+    const totalTryOns = await Product.aggregate([
+      { $group: { _id: null, total: { $sum: "$tryOns" } } }
+    ]);
+    
+    res.json({
+      totalUsers,
+      totalProducts,
+      totalTryOns: totalTryOns[0]?.total || 0
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching users', error: error.message });
+    console.error('Error in /stats:', error);
+    next(error);
   }
 });
-
-// Get all products
-router.get('/products', isAdmin, async (req, res) => {
-  try {
-    const products = await Product.find({});
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching products', error: error.message });
-  }
-});
-
-// Add more admin-specific routes as needed
 
 module.exports = router;

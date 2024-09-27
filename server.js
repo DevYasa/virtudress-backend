@@ -71,7 +71,9 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/contact', contactRoutes);
+console.log('Registering admin routes');
 app.use('/api/admin', adminRoutes);
+console.log('Admin routes registered');
 
 // Example of a cached route
 app.get('/api/cached-data', cache.route(), (req, res) => {
@@ -154,7 +156,10 @@ app.post('/api/payhere-notify', async (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send('Something broke!');
+  res.status(500).json({ 
+    message: 'An unexpected error occurred', 
+    error: process.env.NODE_ENV === 'production' ? {} : err
+  });
 });
 
 const PORT = process.env.PORT || 5000;

@@ -37,7 +37,8 @@ const ProductSchema = new mongoose.Schema({
   },
   productLink: {
     type: String,
-    default: null
+    unique: true,
+    default: () => shortid.generate()
   },
   tryOns: {
     type: Number,

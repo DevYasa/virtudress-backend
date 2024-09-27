@@ -15,7 +15,6 @@ const isAdmin = async (req, res, next) => {
     
     if (user && user.isAdmin) {
       console.log('User is admin, proceeding to next middleware');
-      req.user = user; // Set the user on the request object
       next();
     } else {
       console.log('User is not admin, sending 403');

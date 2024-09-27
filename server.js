@@ -11,6 +11,7 @@ const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
 const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
+const productRoutes = require('./routes/product');
 
 // Import models
 const Order = require('./models/Order');
@@ -71,9 +72,8 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/contact', contactRoutes);
-console.log('Registering admin routes');
 app.use('/api/admin', adminRoutes);
-console.log('Admin routes registered');
+app.use('/api/product', productRoutes);
 
 // Example of a cached route
 app.get('/api/cached-data', cache.route(), (req, res) => {
@@ -108,6 +108,9 @@ app.post('/api/create-order', async (req, res) => {
     res.status(500).json({ error: 'Failed to create order', details: err.message });
   }
 });
+
+// Serve 3D models
+app.use('/3d-models', express.static(path.join(__dirname, '3d-models')));
 
 // PayHere notification handler
 app.post('/api/payhere-notify', async (req, res) => {

@@ -12,6 +12,7 @@ const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
 const productRoutes = require('./routes/product');
 const path = require('path');
+const publicRoutes = require('./routes/publicRoutes');
 
 // Import models
 const User = require('./models/User');
@@ -68,6 +69,7 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/contact', contactRoutes);
